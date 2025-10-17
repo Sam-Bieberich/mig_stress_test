@@ -33,7 +33,6 @@ chmod +x mig_flags.sh
 
 ./mig_flags.sh --list # List all partitions
 
-# Or combine multiple operations
 ./mig_flags.sh --delete --create --list # Combine multiple operations
 ```
 
