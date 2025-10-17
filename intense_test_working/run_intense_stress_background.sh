@@ -33,7 +33,7 @@ echo ""
 echo "Test Configuration:"
 echo "  - Primary device: 95% memory allocation"
 echo "  - Background devices: 75% memory each"
-echo "  - Duration: 30 minutes per primary device"
+echo "  - Duration: 3 minutes per primary device"
 echo "  - All devices stressed simultaneously"
 echo ""
 
@@ -54,7 +54,7 @@ fi
 
 # Count MIG devices to estimate time
 MIG_COUNT=$(nvidia-smi -L | grep "MIG" | wc -l)
-TOTAL_MINUTES=$((MIG_COUNT * 30))
+TOTAL_MINUTES=$((MIG_COUNT * 3))
 TOTAL_HOURS=$((TOTAL_MINUTES / 60))
 REMAINING_MINUTES=$((TOTAL_MINUTES % 60))
 

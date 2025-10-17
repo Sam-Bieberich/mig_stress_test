@@ -90,7 +90,7 @@ sleep 2
 if ps -p $STRESS_PID > /dev/null; then
     echo "✓ Standard stress test is running (PID: $STRESS_PID)"
     echo ""
-    echo "Test will run for 30 minutes per MIG device ($MIG_COUNT devices total)"
+    echo "Test will run for 3 minutes per MIG device ($MIG_COUNT devices total)"
 else
     echo "✗ ERROR: Test failed to start. Check $BACKGROUND_LOG for details."
     exit 1

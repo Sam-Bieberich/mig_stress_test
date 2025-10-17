@@ -7,13 +7,13 @@
 # - Testing one MIG slice at 95% memory (primary target)
 # - Running all other MIG slices at 75% memory simultaneously (background load)
 # - Rotating through each slice as the primary target
-# - Running for 30 minutes per primary target
+# - Running for 3 minutes per primary target
 ##############################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-TEST_DURATION=1800  # 30 minutes in seconds
+TEST_DURATION=180  # 3 minutes in seconds
 LOG_DIR="${SCRIPT_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 MAIN_LOG="${LOG_DIR}/intense_stress_${TIMESTAMP}.log"

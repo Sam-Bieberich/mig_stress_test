@@ -31,7 +31,7 @@ if [ "$MIG_COUNT" -eq 0 ]; then
 fi
 
 echo "Found $MIG_COUNT MIG device(s)"
-TOTAL_MINUTES=$((MIG_COUNT * 30))
+TOTAL_MINUTES=$((MIG_COUNT * 3))
 TOTAL_HOURS=$((TOTAL_MINUTES / 60))
 REMAINING_MINUTES=$((TOTAL_MINUTES % 60))
 echo "Estimated total test time: ${TOTAL_HOURS}h ${REMAINING_MINUTES}m"

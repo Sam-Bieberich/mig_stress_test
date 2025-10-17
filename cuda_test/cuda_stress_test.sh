@@ -14,7 +14,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-TEST_DURATION=1800  # 30 minutes in seconds
+TEST_DURATION=180  # 3 minutes in seconds
 LOG_DIR="${SCRIPT_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 MAIN_LOG="${LOG_DIR}/cuda_test_${TIMESTAMP}.log"

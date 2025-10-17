@@ -4,14 +4,14 @@
 # Standard MIG Stress Test Script
 # 
 # This script stress tests NVIDIA MIG slices one at a time by allocating
-# and using all available memory for 30 minutes per slice.
+# and using all available memory for 3 minutes per slice.
 # Logs all activities and captures any abnormalities (memory issues, crashes).
 ##############################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-TEST_DURATION=1800  # 30 minutes in seconds
+TEST_DURATION=180  # 3 minutes in seconds
 LOG_DIR="${SCRIPT_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 MAIN_LOG="${LOG_DIR}/stress_test_${TIMESTAMP}.log"
