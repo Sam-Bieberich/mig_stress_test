@@ -59,7 +59,26 @@ mig_stress_test/
 
 ## Quick Start
 
-Each test includes automatic MIG setup and background execution:
+### Step 1: Set Up MIG Partitions (One Time)
+
+First, create MIG partitions using the setup script:
+
+```bash
+# Quick setup (creates 7 MIG partitions)
+chmod +x mig_easy_setup.sh
+./mig_easy_setup.sh
+```
+
+Or use the flexible flags script:
+
+```bash
+chmod +x mig_flags.sh
+./mig_flags.sh --enable --delete --create --list
+```
+
+### Step 2: Run Tests
+
+Once MIG partitions are created, run any test:
 
 ```bash
 # Standard Test (sequential, one device at a time)
@@ -83,26 +102,35 @@ chmod +x run_test.sh
 ./run_test.sh
 ```
 
-Each `run_test.sh` script automatically:
-1. ✅ Enables MIG mode
-2. ✅ Deletes old MIG instances
-3. ✅ Creates 7 MIG partitions
-4. ✅ Installs PyTorch (if needed)
-5. ✅ Runs test in background
-6. ✅ Provides monitoring commands
+Each `run_test.sh` script:
+- ✅ Checks for existing MIG partitions
+- ✅ Installs PyTorch (if needed)
+- ✅ Runs test in background
+- ✅ Provides monitoring commands
 
-## Standalone MIG Setup
-
-If you want to set up MIG without running tests:
-
-```bash
-# Quick setup (7 partitions)
-chmod +x mig_easy_setup.sh
+**Note:** MIG partitions only need to be created once. You can run multiple tests on the same MIG setup.
 ./mig_easy_setup.sh
 
 # Flexible setup with flags
 chmod +x mig_flags.sh
 ./mig_flags.sh --enable --delete --create --list
+```
+
+## Workflow Summary
+
+```
+1. Set up MIG partitions (one time):
+   ./mig_easy_setup.sh
+
+2. Run tests (can run multiple times on same MIG setup):
+   cd standard_test/ && ./run_test.sh
+   cd intense_test/ && ./run_test.sh
+   cd thrashing_test/ && ./run_test.sh
+   cd cuda_test/ && ./run_test.sh
+
+3. Monitor:
+   tail -f <test_folder>/logs/background_*.log
+   watch -n 2 nvidia-smi
 ```
 
 ## Monitoring Tests
@@ -268,8 +296,10 @@ kill $(cat logs/*_test_*.pid)
 - sudo access (for MIG configuration)
 
 ### Manual PyTorch Installation
-```bash
-pip3 install torch --index-url https://download.pytorch.org/whl/cu118
+
+```
+module load gcc cuda
+module load python3
 ```
 
 ## Useful Commands

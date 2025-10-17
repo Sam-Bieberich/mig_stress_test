@@ -1,12 +1,10 @@
 #!/bin/bash
 
 ##############################################################################
-# Standard MIG Stress Test - Complete Setup and Run Script
+# Standard MIG Stress Test - Background Runner
 # 
-# This script:
-# 1. Sets up MIG partitions (7 instances)
-# 2. Runs standard stress test (one device at a time, 95% memory)
-# 3. Can be run in background
+# Assumes MIG partitions are already created.
+# Runs standard stress test (one device at a time, 95% memory) in background.
 ##############################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,40 +21,19 @@ echo "Standard MIG Stress Test"
 echo "======================================"
 echo ""
 
-# Step 1: Setup MIG partitions
-echo "Step 1: Setting up MIG partitions..."
-echo ""
-
-# Check if MIG is enabled
-if ! sudo nvidia-smi -i 0 -mig 1 2>&1 | grep -q "Enabled"; then
-    echo "Enabling MIG mode on GPU 0..."
-    sudo nvidia-smi -i 0 -mig 1
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to enable MIG mode. Exiting."
-        exit 1
-    fi
-fi
-
-# Delete old instances
-echo "Deleting any old MIG instances..."
-sudo nvidia-smi mig -dci -i 0 2>/dev/null
-sudo nvidia-smi mig -dgi -i 0 2>/dev/null
-
-# Create 7 partitions
-echo "Creating 7 MIG partitions with profile 19..."
-sudo nvidia-smi mig -cgi 19,19,19,19,19,19,19 -C
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create MIG partitions. Exiting."
+# Check for MIG devices
+MIG_COUNT=$(nvidia-smi -L | grep "MIG" | wc -l)
+if [ "$MIG_COUNT" -eq 0 ]; then
+    echo "ERROR: No MIG devices found!"
+    echo "Please create MIG partitions first using:"
+    echo "  cd .. && ./mig_easy_setup.sh"
     exit 1
 fi
 
-echo ""
-echo "MIG partitions created successfully:"
-nvidia-smi -L | grep MIG
+echo "Found $MIG_COUNT MIG device(s)"
 echo ""
 
-# Step 2: Check for PyTorch
-echo "Step 2: Checking dependencies..."
+# Check for PyTorch
 if ! python3 -c "import torch" 2>/dev/null; then
     echo "WARNING: PyTorch not found. Attempting to install..."
     pip3 install torch --index-url https://download.pytorch.org/whl/cu118 >> "$BACKGROUND_LOG" 2>&1
@@ -70,8 +47,8 @@ if ! python3 -c "import torch" 2>/dev/null; then
 fi
 echo ""
 
-# Step 3: Run the stress test
-echo "Step 3: Starting stress test in background..."
+# Run the stress test in background
+echo "Starting standard stress test in background..."
 echo ""
 
 nohup bash "${SCRIPT_DIR}/standard_stress_test.sh" > "$BACKGROUND_LOG" 2>&1 &
@@ -113,7 +90,7 @@ sleep 2
 if ps -p $STRESS_PID > /dev/null; then
     echo "✓ Standard stress test is running (PID: $STRESS_PID)"
     echo ""
-    echo "Test will run for 30 minutes per MIG device (7 devices = ~3.5 hours)"
+    echo "Test will run for 30 minutes per MIG device ($MIG_COUNT devices total)"
 else
     echo "✗ ERROR: Test failed to start. Check $BACKGROUND_LOG for details."
     exit 1

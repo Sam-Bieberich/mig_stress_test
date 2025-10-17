@@ -1,12 +1,10 @@
 #!/bin/bash
 
 ##############################################################################
-# Memory Thrashing Test - Complete Setup and Run Script
+# Memory Thrashing Test - Background Runner
 # 
-# This script:
-# 1. Sets up MIG partitions (7 instances)
-# 2. Runs memory thrashing test (rapid alloc/free cycles)
-# 3. Tests memory allocator and fragmentation handling
+# Assumes MIG partitions are already created.
+# Runs memory thrashing test (rapid alloc/free cycles) in background.
 ##############################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,40 +21,19 @@ echo "Memory Thrashing Test"
 echo "======================================"
 echo ""
 
-# Step 1: Setup MIG partitions
-echo "Step 1: Setting up MIG partitions..."
-echo ""
-
-# Check if MIG is enabled
-if ! sudo nvidia-smi -i 0 -mig 1 2>&1 | grep -q "Enabled"; then
-    echo "Enabling MIG mode on GPU 0..."
-    sudo nvidia-smi -i 0 -mig 1
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to enable MIG mode. Exiting."
-        exit 1
-    fi
-fi
-
-# Delete old instances
-echo "Deleting any old MIG instances..."
-sudo nvidia-smi mig -dci -i 0 2>/dev/null
-sudo nvidia-smi mig -dgi -i 0 2>/dev/null
-
-# Create 7 partitions
-echo "Creating 7 MIG partitions with profile 19..."
-sudo nvidia-smi mig -cgi 19,19,19,19,19,19,19 -C
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create MIG partitions. Exiting."
+# Check for MIG devices
+MIG_COUNT=$(nvidia-smi -L | grep "MIG" | wc -l)
+if [ "$MIG_COUNT" -eq 0 ]; then
+    echo "ERROR: No MIG devices found!"
+    echo "Please create MIG partitions first using:"
+    echo "  cd .. && ./mig_easy_setup.sh"
     exit 1
 fi
 
-echo ""
-echo "MIG partitions created successfully:"
-nvidia-smi -L | grep MIG
+echo "Found $MIG_COUNT MIG device(s)"
 echo ""
 
-# Step 2: Check for PyTorch
-echo "Step 2: Checking dependencies..."
+# Check for PyTorch
 if ! python3 -c "import torch" 2>/dev/null; then
     echo "WARNING: PyTorch not found. Attempting to install..."
     pip3 install torch --index-url https://download.pytorch.org/whl/cu118 >> "$BACKGROUND_LOG" 2>&1
@@ -70,8 +47,8 @@ if ! python3 -c "import torch" 2>/dev/null; then
 fi
 echo ""
 
-# Step 3: Run the thrashing test
-echo "Step 3: Starting memory thrashing test in background..."
+# Run the thrashing test in background
+echo "Starting memory thrashing test in background..."
 echo ""
 
 nohup bash "${SCRIPT_DIR}/thrashing_stress_test.sh" > "$BACKGROUND_LOG" 2>&1 &
