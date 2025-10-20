@@ -45,10 +45,12 @@ mig_stress_test/
 
 ### 3. Thrashing Test (`thrashing_test/`)
 - Rapid memory allocation/deallocation cycles
-- Variable chunk sizes and random patterns
+- Variable chunk sizes (10MB to 1GB) and random patterns
 - Tests memory allocator robustness
-- **Intensity:** High
-- **Use case:** Memory fragmentation and allocator stress
+- **Runs on ALL MIG slices simultaneously** 
+- 70% fragmentation per cycle with mixed compute operations
+- **Intensity:** Very High
+- **Use case:** Memory fragmentation and allocator stress under concurrent load
 
 ### 4. CUDA Test (`cuda_test/`)
 - Maximum CUDA streams (128+)
@@ -177,9 +179,9 @@ watch -n 2 'nvidia-smi --query-gpu=memory.used,memory.total --format=csv'
 |---------|----------|---------|-----------|----------|
 | **Primary Focus** | Sequential stability | Multi-tenant load | Memory allocator | API robustness |
 | **Memory Pattern** | Static 95% | Mixed 95%/75% | Rapid alloc/free | Variable patterns |
-| **Device Usage** | One at a time | All simultaneous | One at a time | One at a time |
-| **Thermal Load** | Moderate | Very High | High | High |
-| **Production Realism** | Low | **Very High** | Medium | Medium |
+| **Device Usage** | One at a time | All simultaneous | **All simultaneous** | One at a time |
+| **Thermal Load** | Moderate | Very High | **Very High** | High |
+| **Production Realism** | Low | **Very High** | **High** | Medium |
 | **Best For** | Baseline testing | Production validation | Memory stress | Edge case detection |
 
 ### Log Files

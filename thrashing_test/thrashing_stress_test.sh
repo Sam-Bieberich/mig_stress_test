@@ -104,13 +104,15 @@ def memory_thrashing_test(device_uuid, duration, log_file):
         deallocation_count = 0
         oom_count = 0
         
-        # Define allocation patterns
+        # Define allocation patterns - MORE INTENSIVE
         chunk_sizes = [
             10 * 1024 * 1024,    # 10 MB
             50 * 1024 * 1024,    # 50 MB
             100 * 1024 * 1024,   # 100 MB
             200 * 1024 * 1024,   # 200 MB
             500 * 1024 * 1024,   # 500 MB
+            750 * 1024 * 1024,   # 750 MB
+            1024 * 1024 * 1024,  # 1 GB
         ]
         
         log_message("Starting aggressive memory thrashing cycles...", log_file)
@@ -120,8 +122,8 @@ def memory_thrashing_test(device_uuid, duration, log_file):
                 cycle_count += 1
                 tensors = []
                 
-                # Phase 1: Rapid allocation with varying sizes
-                num_allocs = random.randint(5, 20)
+                # Phase 1: Rapid allocation with varying sizes - MORE INTENSIVE
+                num_allocs = random.randint(10, 40)
                 for i in range(num_allocs):
                     try:
                         chunk_size = random.choice(chunk_sizes)
@@ -139,24 +141,39 @@ def memory_thrashing_test(device_uuid, duration, log_file):
                 
                 torch.cuda.synchronize()
                 
-                # Phase 2: Random operations on tensors
+                # Phase 2: Aggressive compute operations on tensors - MORE INTENSIVE
                 if tensors:
-                    for tensor in random.sample(tensors, min(5, len(tensors))):
+                    # More operations on more tensors
+                    num_ops = min(10, len(tensors))
+                    for tensor in random.sample(tensors, num_ops):
+                        # Mix of operations to stress compute + memory
                         tensor.mul_(1.01)
                         tensor.add_(0.01)
+                        tensor.pow_(2)
+                        tensor.sqrt_()
+                        # Add matrix operations for compute stress
+                        if tensor.numel() > 10000:
+                            size = int(tensor.numel() ** 0.5)
+                            if size > 100:
+                                try:
+                                    reshaped = tensor[:size*size].view(size, size)
+                                    torch.mm(reshaped, reshaped.T)
+                                except:
+                                    pass
                     torch.cuda.synchronize()
                 
-                # Phase 3: Random deallocation pattern
-                # Delete tensors in random order to create fragmentation
+                # Phase 3: Aggressive deallocation pattern - MORE INTENSIVE
+                # Delete MORE tensors in random order to create severe fragmentation
                 indices_to_delete = random.sample(range(len(tensors)), 
-                                                 len(tensors) // 2 if tensors else 0)
+                                                 int(len(tensors) * 0.7) if tensors else 0)
                 for idx in sorted(indices_to_delete, reverse=True):
                     del tensors[idx]
                     deallocation_count += 1
                 
-                # Phase 4: Partial cleanup and cache clearing
+                # Phase 4: Partial cleanup and LESS FREQUENT cache clearing - MORE INTENSIVE
                 del tensors
-                if cycle_count % 10 == 0:
+                # Clear cache less frequently to increase fragmentation pressure
+                if cycle_count % 20 == 0:
                     torch.cuda.empty_cache()
                 
                 # Progress logging
@@ -172,8 +189,8 @@ def memory_thrashing_test(device_uuid, duration, log_file):
                         log_file
                     )
                 
-                # Small delay to prevent overwhelming the system
-                time.sleep(0.01)
+                # MINIMAL delay for maximum intensity
+                time.sleep(0.001)
                 
             except RuntimeError as e:
                 log_message(f"ERROR in thrashing cycle {cycle_count}: {str(e)}", log_file)
@@ -220,47 +237,97 @@ chmod +x "$PYTHON_SCRIPT"
 log_info "Python thrashing script created."
 echo "" | tee -a "$MAIN_LOG"
 
-# Run thrashing test on each MIG device
+# Run thrashing test on ALL MIG devices SIMULTANEOUSLY
+log_info "========================================="
+log_info "SIMULTANEOUS THRASHING TEST"
+log_info "Starting thrashing on ALL $MIG_COUNT MIG devices in parallel"
+log_info "========================================="
+echo "" | tee -a "$MAIN_LOG"
+
+# Array to store background process PIDs
+declare -a WORKER_PIDS=()
 device_num=0
+
+# Launch thrashing test on each device in the background
 echo "$MIG_DEVICES" | while read -r device_uuid; do
     device_num=$((device_num + 1))
     
-    log_info "========================================="
-    log_info "Thrashing Test - MIG Device $device_num of $MIG_COUNT"
-    log_info "Device UUID: $device_uuid"
-    log_info "========================================="
+    DEVICE_LOG="${LOG_DIR}/thrashing_device_${device_num}_${TIMESTAMP}.log"
     
-    if python3 "$PYTHON_SCRIPT" "$device_uuid" "$TEST_DURATION" "$MAIN_LOG" 2>&1 | tee -a "$MAIN_LOG"; then
-        log_info "Thrashing test completed successfully for device $device_uuid"
-    else
-        exit_code=$?
-        log_error "Thrashing test FAILED for device $device_uuid (exit code: $exit_code)"
-    fi
+    log_info "Launching thrashing worker for MIG Device $device_num/$MIG_COUNT (UUID: $device_uuid)"
     
-    # Check for errors in dmesg
-    if dmesg | tail -100 | grep -i "gpu\|nvidia\|cuda" | grep -i "error\|fail\|crash" >> "$ERROR_LOG" 2>&1; then
-        log_warning "GPU-related errors found in system logs."
-    fi
+    # Start the thrashing test in background
+    python3 "$PYTHON_SCRIPT" "$device_uuid" "$TEST_DURATION" "$DEVICE_LOG" 2>&1 &
+    worker_pid=$!
+    echo "$worker_pid" >> "${LOG_DIR}/worker_pids_${TIMESTAMP}.tmp"
     
-    echo "" | tee -a "$MAIN_LOG"
+    log_info "  -> Worker PID: $worker_pid"
+    log_info "  -> Device log: $DEVICE_LOG"
+done
+
+echo "" | tee -a "$MAIN_LOG"
+log_info "All thrashing workers launched! Now monitoring..."
+log_info "Test duration: $TEST_DURATION seconds"
+echo "" | tee -a "$MAIN_LOG"
+
+# Wait for all background processes to complete
+log_info "Waiting for all thrashing workers to complete..."
+FAILED_COUNT=0
+SUCCESS_COUNT=0
+
+if [ -f "${LOG_DIR}/worker_pids_${TIMESTAMP}.tmp" ]; then
+    while read -r worker_pid; do
+        if wait $worker_pid; then
+            log_info "Worker PID $worker_pid completed successfully"
+            SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+        else
+            exit_code=$?
+            log_error "Worker PID $worker_pid FAILED (exit code: $exit_code)"
+            FAILED_COUNT=$((FAILED_COUNT + 1))
+        fi
+    done < "${LOG_DIR}/worker_pids_${TIMESTAMP}.tmp"
     
-    if [ $device_num -lt $MIG_COUNT ]; then
-        log_info "Pausing 10 seconds before next device..."
-        sleep 10
+    # Clean up temp file
+    rm -f "${LOG_DIR}/worker_pids_${TIMESTAMP}.tmp"
+fi
+
+echo "" | tee -a "$MAIN_LOG"
+
+# Consolidate all device logs into main log
+log_info "Consolidating device logs..."
+for device_log in "${LOG_DIR}"/thrashing_device_*_${TIMESTAMP}.log; do
+    if [ -f "$device_log" ]; then
+        echo "" >> "$MAIN_LOG"
+        echo "=========================================" >> "$MAIN_LOG"
+        echo "Device Log: $(basename $device_log)" >> "$MAIN_LOG"
+        echo "=========================================" >> "$MAIN_LOG"
+        cat "$device_log" >> "$MAIN_LOG"
     fi
 done
 
+echo "" | tee -a "$MAIN_LOG"
+
+# Check for errors in dmesg
+if dmesg | tail -100 | grep -i "gpu\|nvidia\|cuda" | grep -i "error\|fail\|crash" >> "$ERROR_LOG" 2>&1; then
+    log_warning "GPU-related errors found in system logs."
+fi
+
 # Final summary
 log_info "========================================="
-log_info "All memory thrashing tests completed!"
+log_info "SIMULTANEOUS THRASHING TEST COMPLETED"
 log_info "========================================="
+log_info "Total MIG devices tested: $MIG_COUNT"
+log_info "Successful workers: $SUCCESS_COUNT"
+log_info "Failed workers: $FAILED_COUNT"
+log_info "Test duration: $TEST_DURATION seconds"
 log_info "Main log: $MAIN_LOG"
 log_info "Error log: $ERROR_LOG"
+log_info "Device logs: ${LOG_DIR}/thrashing_device_*_${TIMESTAMP}.log"
 
-if [ -s "$ERROR_LOG" ]; then
-    log_warning "Abnormalities detected. Check $ERROR_LOG for details."
+if [ $FAILED_COUNT -gt 0 ] || [ -s "$ERROR_LOG" ]; then
+    log_warning "Some tests failed or abnormalities detected. Check logs for details."
     exit 1
 else
-    log_info "No abnormalities detected. All tests passed!"
+    log_info "All thrashing tests passed successfully!"
     exit 0
 fi
