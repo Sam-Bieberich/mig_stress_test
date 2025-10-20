@@ -2,12 +2,35 @@
 
 ## Quick Start
 
-### Standard Test (Sequential, One Device at a Time)
+### Choose a Test Type
+
 ```bash
-chmod +x run_stress_test_background.sh
-./run_stress_test_background.sh
+# Standard Test (Sequential, one device at a time)
+cd standard_test/ && ./run_test.sh
+
+# Intense Test (All devices simultaneously - RECOMMENDED)
+cd intense_test/ && ./run_test.sh
+
+# Thrashing Test (Memory allocator stress)
+cd thrashing_test/ && ./run_test.sh
+
+# CUDA API Test (Edge cases and limits)
+cd cuda_test/ && ./run_test.sh
+
+# Intense Thrashing Test (Sustained high memory + fragmentation)
+cd intense_thrashing_test/ && ./run_test.sh
+
+# PCIe Bandwidth Test (Bandwidth fairness between MIG partitions)
+cd pcie_test/ && ./run_test.sh
+
+# Multi-Process Test (Multi-process handling, 4 workers per device)
+cd multiproc_test/ && ./run_test.sh
+
+# Thermal Shock Test (Hot/cold thermal cycling)
+cd thermal_test/ && ./run_test.sh
 ```
-There are a suite of stress tests, and the process can be replicated in each directory. 
+
+All tests automatically set up MIG partitions and run in the background. 
 
 ## Monitoring
 
@@ -15,11 +38,12 @@ There are a suite of stress tests, and the process can be replicated in each dir
 # Check process status
 ps aux | grep stress
 
-# Live logs
-tail -f stress_test_logs/intense_stress_*.log
+# Live logs (adjust folder name for your test)
+tail -f logs/background_*.log
+tail -f logs/*_test_*.log
 
 # Errors only
-tail -f stress_test_logs/*_errors_*.log
+tail -f logs/*_errors_*.log
 
 # GPU monitoring
 watch -n 2 nvidia-smi
@@ -35,11 +59,12 @@ watch -n 2 'nvidia-smi --query-gpu=index,name,temperature.gpu,memory.used,memory
 ps aux | grep stress
 kill <PID>
 
-# For intense test, also kill workers
-pkill -f mig_intense_stress.py
+# For multi-worker tests (intense, thrashing, multiproc, etc.)
+pkill -f stress.py
+pkill -f stress_test.sh
 
-# Or use saved PID
-kill $(cat stress_test_logs/intense_stress_*.pid)
+# Or use saved PID (adjust folder name)
+kill $(cat logs/*_test_*.pid)
 ```
 
 ## Understanding Results
@@ -66,15 +91,17 @@ kill $(cat stress_test_logs/intense_stress_*.pid)
 - **Problem** if happening well below target
 - Solution: Check `nvidia-smi` for other processes
 
-### Background workers fail (Intense test)
+### Background workers fail (Multi-worker tests)
 - Check MIG configuration: `nvidia-smi -L`
 - Verify all UUIDs are valid
 - Ensure sufficient memory on all slices
+- Check Python environment is accessible
 
 ### High temperatures
 - Monitor: `nvidia-smi -q -d TEMPERATURE`
 - Check cooling system
-- Intense test generates more heat
+- Intense, multi-process, and thermal tests generate most heat
+- Thermal test intentionally cycles between hot and cold
 
 ### Process hangs
 - Check system logs: `dmesg | tail -100`
@@ -83,13 +110,14 @@ kill $(cat stress_test_logs/intense_stress_*.pid)
 
 ## Log Files
 
+Each test creates logs in its own `logs/` directory:
+
 ```
-stress_test_logs/
-├── stress_test_TIMESTAMP.log          # Standard test main log
-├── stress_test_errors_TIMESTAMP.log   # Standard test errors
-├── intense_stress_TIMESTAMP.log       # Intense test main log
-├── intense_stress_errors_TIMESTAMP.log # Intense test errors
-└── intense_stress_python.log          # Worker process logs
+<test_folder>/logs/
+├── background_TIMESTAMP.log              # Background process output
+├── <test_type>_test_TIMESTAMP.log        # Main test log
+├── <test_type>_test_errors_TIMESTAMP.log # Errors and warnings
+└── Device logs for multi-device tests
 ```
 
 ## Useful Commands
@@ -104,12 +132,22 @@ nvidia-smi mig -lgi
 # Monitor temperature continuously
 watch -n 1 nvidia-smi -q -d TEMPERATURE
 
+# Monitor power consumption
+watch -n 1 nvidia-smi -q -d POWER
+
 # Check for GPU errors in system
 dmesg | grep -i nvidia | tail -50
 
 # View all test logs
-ls -lh stress_test_logs/
+find . -name "*.log" -mtime -1 -exec ls -lh {} \;
 
 # Count errors across all logs
-grep -i error stress_test_logs/*.log | wc -l
+find . -name "*errors*.log" -exec grep -i error {} \; | wc -l
 ```
+
+## Test Recommendations
+
+- **Production Validation:** Run `intense_test`, `pcie_test`, and `multiproc_test`
+- **Memory Stress:** Run `thrashing_test` and `intense_thrashing_test`
+- **Thermal Validation:** Run `thermal_test` and monitor temperature deltas
+- **Comprehensive Check:** Run all 8 tests sequentially for full validation

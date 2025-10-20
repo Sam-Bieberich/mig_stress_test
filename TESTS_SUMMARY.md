@@ -8,6 +8,10 @@ mig_stress_test/
 ├── intense_test/           ✅ Multi-device simultaneous testing (RECOMMENDED)
 ├── thrashing_test/         ✅ Memory allocator stress testing
 ├── cuda_test/              ✅ CUDA API edge case testing
+├── intense_thrashing_test/ ✅ Sustained high memory + fragmentation stress
+├── pcie_test/              ✅ PCIe bandwidth fairness testing
+├── multiproc_test/         ✅ Multi-process concurrent access testing
+├── thermal_test/           ✅ Thermal shock cycling testing
 ├── mig_easy_setup.sh       (standalone MIG setup)
 ├── mig_flags.sh            (flexible MIG management)
 ├── README.md               (complete documentation)
@@ -35,6 +39,26 @@ mig_stress_test/
 - **What:** Maximum CUDA streams, unusual tensor shapes, API edge cases
 - **Why:** Validates CUDA API robustness and scheduler limits
 - **Intensity:** ⭐⭐⭐⭐ High
+
+### 5. Intense Thrashing Test
+- **What:** 65% persistent base load + 20-30% rapid alloc/free on all devices
+- **Why:** Sustained high memory pressure + fragmentation stress
+- **Intensity:** ⭐⭐⭐⭐⭐ Extreme
+
+### 6. PCIe Bandwidth Test
+- **What:** Continuous H2D/D2H transfers (40% memory) on all devices simultaneously
+- **Why:** Tests PCIe bandwidth fairness and contention between MIG partitions
+- **Intensity:** ⭐⭐⭐⭐⭐ Very High
+
+### 7. Multi-Process Test
+- **What:** 4 worker processes per MIG device (compute/memory/transfer/streams)
+- **Why:** Tests multi-process handling, isolation, and scheduler under heavy load
+- **Intensity:** ⭐⭐⭐⭐⭐ Extreme
+
+### 8. Thermal Shock Test
+- **What:** 30s hot phase (90% memory + max compute) + 30s cold phase (idle)
+- **Why:** Validates thermal management, power stability, clock throttling
+- **Intensity:** ⭐⭐⭐⭐⭐ Very High (thermal cycling)
 
 ## How to Run
 
@@ -72,12 +96,12 @@ kill $(cat logs/*_test_*.pid)
 
 ## Test Comparison
 
-| Feature | Standard | Intense | Thrashing | CUDA API |
-|---------|----------|---------|-----------|----------|
-| **Focus** | Sequential stability | Multi-tenant | Memory allocator | API robustness |
-| **Devices** | One at a time | All simultaneous | One at a time | One at a time |
-| **Thermal** | Moderate | Very High | High | High |
-| **Production Realism** | Low | **Very High** | Medium | Medium |
+| Feature | Standard | Intense | Thrashing | CUDA API | Intense Thrashing | PCIe | Multi-Process | Thermal |
+|---------|----------|---------|-----------|----------|-------------------|------|---------------|---------|
+| **Focus** | Sequential stability | Multi-tenant | Memory allocator | API robustness | Sustained pressure | Bandwidth fairness | Multi-process isolation | Thermal mgmt |
+| **Devices** | One at a time | All simultaneous | All simultaneous | One at a time | **All simultaneous** | **All simultaneous** | **All simultaneous** | **All simultaneous** |
+| **Thermal** | Moderate | Very High | High | High | **Extreme** | **Very High** | **Extreme** | **Very High** |
+| **Production Realism** | Low | **Very High** | Medium | Medium | **Very High** | **Very High** | **Very High** | **High** |
 
 ## Key Features
 
@@ -87,6 +111,8 @@ kill $(cat logs/*_test_*.pid)
 ✅ **Error Detection** - Captures crashes, OOM, system errors
 ✅ **PyTorch Auto-Install** - Handles dependencies automatically
 ✅ **Production-Ready** - 30 min per device, 3.5 hours total for 7 MIGs
+✅ **8 Test Types** - Covers sequential, multi-tenant, memory, API, PCIe, multi-process, and thermal scenarios
+✅ **Multi-Device Testing** - Most tests run on all MIG devices simultaneously
 
 ## File Organization
 
@@ -102,3 +128,18 @@ Each test folder contains:
 ✅ Memory reaches target percentages
 ✅ No crashes or system errors
 ✅ Stable temperatures
+
+## New Advanced Tests (5-8)
+
+The newer tests target specific production failure scenarios:
+
+- **Intense Thrashing:** Combines sustained high memory (65% base) with fragmentation stress
+- **PCIe Bandwidth:** Validates bandwidth fairness - critical for multi-tenant workloads
+- **Multi-Process:** Tests scheduler with 28 concurrent processes (4 per MIG device)
+- **Thermal Shock:** Power/thermal cycling to validate clock stability and throttling behavior
+
+These tests are particularly useful for:
+- Finding edge cases in production environments
+- Validating multi-process isolation guarantees
+- Testing PCIe bandwidth contention between MIG partitions
+- Verifying thermal management under rapid power fluctuations

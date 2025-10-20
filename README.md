@@ -4,7 +4,7 @@ Comprehensive stress testing suite for NVIDIA MIG (Multi-Instance GPU) partition
 
 ## Overview
 
-This repository contains **four different types of stress tests**, each designed to validate MIG stability under different workload patterns. Each test automatically sets up MIG partitions and can be run in the background.
+This repository contains **eight different types of stress tests**, each designed to validate MIG stability under different workload patterns. Each test automatically sets up MIG partitions and can be run in the background.
 
 ## Repository Structure
 
@@ -22,6 +22,18 @@ mig_stress_test/
 ├── cuda_test/              # CUDA API edge cases and limits
 │   ├── run_test.sh        # Setup MIG + run test in background
 │   └── cuda_stress_test.sh
+├── intense_thrashing_test/ # Sustained high memory + thrashing
+│   ├── run_test.sh        # Setup MIG + run test in background
+│   └── intense_thrashing_stress_test.sh
+├── pcie_test/              # PCIe bandwidth saturation test
+│   ├── run_test.sh        # Setup MIG + run test in background
+│   └── pcie_stress_test.sh
+├── multiproc_test/         # Multi-process concurrent access
+│   ├── run_test.sh        # Setup MIG + run test in background
+│   └── multiproc_stress_test.sh
+├── thermal_test/           # Thermal shock cycling test
+│   ├── run_test.sh        # Setup MIG + run test in background
+│   └── thermal_stress_test.sh
 ├── mig_easy_setup.sh       # Standalone MIG setup script
 ├── mig_flags.sh            # Flexible MIG management with flags
 └── QUICK_REFERENCE.md      # Quick command reference
@@ -58,6 +70,38 @@ mig_stress_test/
 - API edge cases and limits
 - **Intensity:** High
 - **Use case:** CUDA API robustness validation
+
+### 5. Intense Thrashing Test (`intense_thrashing_test/`)
+- 65% persistent base memory load per device
+- 20-30% additional thrashing space for rapid alloc/free
+- **Runs on ALL MIG slices simultaneously**
+- Maintains sustained high memory usage (~85%)
+- **Intensity:** Extreme
+- **Use case:** Sustained memory pressure + fragmentation stress
+
+### 6. PCIe Bandwidth Test (`pcie_test/`)
+- Tests PCIe bandwidth fairness between MIG partitions
+- 40% memory allocated for continuous H2D/D2H transfers
+- Measures bidirectional bandwidth per device (GB/s)
+- **Runs on ALL MIG slices simultaneously**
+- **Intensity:** Very High
+- **Use case:** PCIe contention and bandwidth isolation validation
+
+### 7. Multi-Process Test (`multiproc_test/`)
+- 4 worker processes per MIG device (28 total)
+- Each worker type: compute, memory, transfer, or streams
+- Tests multi-process handling and isolation
+- **Runs on ALL MIG slices simultaneously**
+- **Intensity:** Extreme
+- **Use case:** Production multi-process scenarios, scheduler stress
+
+### 8. Thermal Shock Test (`thermal_test/`)
+- 30-second HOT phase (90% memory + max compute)
+- 30-second COLD phase (idle)
+- Monitors temperature deltas and power fluctuations
+- **Runs on ALL MIG slices simultaneously**
+- **Intensity:** Very High (thermal cycling)
+- **Use case:** Thermal management, power stability, clock throttling validation
 
 ## Quick Start
 
@@ -102,6 +146,26 @@ chmod +x run_test.sh
 cd cuda_test/
 chmod +x run_test.sh
 ./run_test.sh
+
+# Intense Thrashing Test (sustained high memory + fragmentation)
+cd intense_thrashing_test/
+chmod +x run_test.sh
+./run_test.sh
+
+# PCIe Bandwidth Test (bandwidth fairness testing)
+cd pcie_test/
+chmod +x run_test.sh
+./run_test.sh
+
+# Multi-Process Test (multi-process handling)
+cd multiproc_test/
+chmod +x run_test.sh
+./run_test.sh
+
+# Thermal Shock Test (thermal cycling)
+cd thermal_test/
+chmod +x run_test.sh
+./run_test.sh
 ```
 
 Each `run_test.sh` script:
@@ -116,10 +180,14 @@ Each `run_test.sh` script:
 
 | Test Type | 3-Minute Test | 30-Minute Test | Notes |
 |-----------|---------------|----------------|-------|
-| **Standard** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+| **Standard** | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
 | **Intense** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
-| **Thrashing** | ⏳ Pending | ⏳ Pending | Not yet tested |
-| **CUDA API** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+| **Thrashing** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| **CUDA API** | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
+| **Intense Thrashing** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| **PCIe Bandwidth** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
+| **Multi-Process** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
+| **Thermal Shock** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
 
 **Legend:**
 - ✅ **Completed** - Test has been run and validated successfully
@@ -143,6 +211,10 @@ cd standard_test/ && ./run_test.sh
 cd intense_test/ && ./run_test.sh
 cd thrashing_test/ && ./run_test.sh
 cd cuda_test/ && ./run_test.sh
+cd intense_thrashing_test/ && ./run_test.sh
+cd pcie_test/ && ./run_test.sh
+cd multiproc_test/ && ./run_test.sh
+cd thermal_test/ && ./run_test.sh
 
 # 3. Monitor:
 tail -f <test_folder>/logs/background_*.log
@@ -175,14 +247,14 @@ watch -n 2 'nvidia-smi --query-gpu=memory.used,memory.total --format=csv'
 
 ## Test Comparison
 
-| Feature | Standard | Intense | Thrashing | CUDA API |
-|---------|----------|---------|-----------|----------|
-| **Primary Focus** | Sequential stability | Multi-tenant load | Memory allocator | API robustness |
-| **Memory Pattern** | Static 95% | Mixed 95%/75% | Rapid alloc/free | Variable patterns |
-| **Device Usage** | One at a time | All simultaneous | **All simultaneous** | One at a time |
-| **Thermal Load** | Moderate | Very High | **Very High** | High |
-| **Production Realism** | Low | **Very High** | **High** | Medium |
-| **Best For** | Baseline testing | Production validation | Memory stress | Edge case detection |
+| Feature | Standard | Intense | Thrashing | CUDA API | Intense Thrashing | PCIe | Multi-Process | Thermal |
+|---------|----------|---------|-----------|----------|-------------------|------|---------------|---------|
+| **Primary Focus** | Sequential stability | Multi-tenant load | Memory allocator | API robustness | Sustained pressure | Bandwidth fairness | Multi-process isolation | Thermal management |
+| **Memory Pattern** | Static 95% | Mixed 95%/75% | Rapid alloc/free | Variable patterns | 65% base + 20-30% thrash | 40% transfer buffers | 4 workers/device | 90% hot / 0% cold |
+| **Device Usage** | One at a time | All simultaneous | **All simultaneous** | One at a time | **All simultaneous** | **All simultaneous** | **All simultaneous** | **All simultaneous** |
+| **Thermal Load** | Moderate | Very High | **Very High** | High | **Extreme** | **Very High** | **Extreme** | **Very High (cycling)** |
+| **Production Realism** | Low | **Very High** | **High** | Medium | **Very High** | **Very High** | **Very High** | **High** |
+| **Best For** | Baseline testing | Production validation | Memory stress | Edge case detection | Sustained load + fragmentation | PCIe contention | Scheduler stress | Power/thermal validation |
 
 ### Log Files
 
