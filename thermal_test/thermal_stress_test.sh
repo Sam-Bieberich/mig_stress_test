@@ -14,7 +14,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-TEST_DURATION=180  # 3 minutes in seconds (6 cycles of 30s hot + 30s cold)
+TEST_DURATION=1800  # 3 minutes in seconds (6 cycles of 30s hot + 30s cold)
 CYCLE_DURATION=30  # 30 seconds per phase (hot or cold)
 LOG_DIR="${SCRIPT_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

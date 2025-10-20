@@ -10,7 +10,7 @@
 
 # Configuration
 # TEST_DURATION=1800  # 30 minutes in seconds
-TEST_DURATION=300  # 5 minutes in seconds
+TEST_DURATION=1800  # 5 minutes in seconds
 LOG_DIR="./stress_test_logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 MAIN_LOG="${LOG_DIR}/stress_test_${TIMESTAMP}.log"

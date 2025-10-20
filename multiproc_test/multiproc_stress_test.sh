@@ -13,7 +13,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
-TEST_DURATION=180  # 3 minutes in seconds
+TEST_DURATION=1800  # 3 minutes in seconds
 PROCESSES_PER_MIG=4  # Number of processes per MIG device
 LOG_DIR="${SCRIPT_DIR}/logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

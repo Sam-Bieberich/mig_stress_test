@@ -48,7 +48,7 @@ mig_stress_test/
 - **Intensity:** Moderate
 - **Use case:** Isolate individual MIG slice issues
 
-### 2. Intense Test (`intense_test/`) ⚡ **RECOMMENDED**
+### 2. Intense Test (`intense_test/`) 
 - One MIG slice at **95% memory** (primary)
 - **All other slices at 75% simultaneously** (background)
 - Rotates through each slice
@@ -185,9 +185,9 @@ Each `run_test.sh` script:
 | **Thrashing** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
 | **CUDA API** | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
 | **Intense Thrashing** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
-| **PCIe Bandwidth** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
-| **Multi-Process** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
-| **Thermal Shock** | ⏳ Pending | ⏳ Pending | New test - not yet validated |
+| **PCIe Bandwidth** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| **Multi-Process** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| **Thermal Shock** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
 
 **Legend:**
 - ✅ **Completed** - Test has been run and validated successfully
