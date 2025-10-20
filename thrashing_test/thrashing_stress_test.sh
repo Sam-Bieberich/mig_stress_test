@@ -10,6 +10,9 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+module load gcc cuda
+module load python3
+
 # Configuration
 TEST_DURATION=180  # 3 minutes in seconds
 LOG_DIR="${SCRIPT_DIR}/logs"
