@@ -7,12 +7,7 @@
 chmod +x run_stress_test_background.sh
 ./run_stress_test_background.sh
 ```
-
-### Intense Test (All Devices Simultaneously) - RECOMMENDED
-```bash
-chmod +x run_intense_stress_background.sh
-./run_intense_stress_background.sh
-```
+There are a suite of stress tests, and the process can be replicated in each directory. 
 
 ## Monitoring
 
@@ -46,18 +41,6 @@ pkill -f mig_intense_stress.py
 # Or use saved PID
 kill $(cat stress_test_logs/intense_stress_*.pid)
 ```
-
-## Test Comparison
-
-| Feature | Standard Test | Intense Test |
-|---------|--------------|--------------|
-| Primary device memory | 95% | 95% |
-| Other devices memory | 0% (idle) | 75% (active) |
-| Thermal load | Moderate | High |
-| Multi-tenancy simulation | No | Yes |
-| Resource contention | No | Yes |
-| Production realism | Low | High |
-| Time (7 MIGs) | ~3.5 hours | ~3.5 hours |
 
 ## Understanding Results
 

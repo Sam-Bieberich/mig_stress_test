@@ -1,9 +1,5 @@
 # MIG Stress Test Suite - Summary
 
-## What Was Created
-
-A comprehensive MIG stress testing suite with **4 different test types**, each in its own folder with automatic MIG setup and background execution.
-
 ## Folder Structure
 
 ```
@@ -83,21 +79,6 @@ kill $(cat logs/*_test_*.pid)
 | **Thermal** | Moderate | Very High | High | High |
 | **Production Realism** | Low | **Very High** | Medium | Medium |
 
-## Recommendations
-
-### For Production Validation
-Run **Intense Test** - Best simulates real-world scenarios
-
-### For Comprehensive Testing
-Run all four tests in order:
-1. Standard (baseline)
-2. Intense (production)
-3. Thrashing (memory)
-4. CUDA API (edge cases)
-
-### For Quick Validation
-Standard → Intense (if standard passes)
-
 ## Key Features
 
 ✅ **Automatic MIG Setup** - No manual configuration needed
@@ -112,7 +93,7 @@ Standard → Intense (if standard passes)
 Each test folder contains:
 - `run_test.sh` - Main entry point (setup + run in background)
 - `<test_name>_stress_test.sh` - Core test logic
-- `logs/` - Created automatically with timestamped logs
+- `logs/` - Created automatically with timestamped logs. Not included in repository
 
 ## Success Criteria
 
@@ -121,18 +102,3 @@ Each test folder contains:
 ✅ Memory reaches target percentages
 ✅ No crashes or system errors
 ✅ Stable temperatures
-
-## Next Steps
-
-1. Choose your test type based on goals
-2. Run `cd <test_name>_test/ && ./run_test.sh`
-3. Monitor with `tail -f logs/background_*.log`
-4. Check results in error logs
-5. Repeat for comprehensive validation
-
----
-
-**Created:** 4 complete test suites with MIG setup integration
-**Duration:** 30 minutes per MIG device
-**Total Time:** ~3.5 hours for 7 MIG partitions
-**Automation:** Fully automated setup and execution

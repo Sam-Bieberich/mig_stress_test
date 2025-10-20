@@ -13,7 +13,7 @@ mig_stress_test/
 ├── standard_test/          # Sequential single-device stress test
 │   ├── run_test.sh        # Setup MIG + run test in background
 │   └── standard_stress_test.sh
-├── intense_test/           # Multi-device simultaneous stress test  ⚡ RECOMMENDED
+├── intense_test/           # Multi-device simultaneous stress test 
 │   ├── run_test.sh        # Setup MIG + run test in background
 │   └── intense_stress_test.sh
 ├── thrashing_test/         # Memory allocation/deallocation stress
@@ -33,28 +33,28 @@ mig_stress_test/
 - Tests each MIG slice **sequentially** (one at a time)
 - Allocates 95% of device memory per device
 - 30 minutes per device
-- **Intensity:** ⭐⭐⭐ Moderate
+- **Intensity:** Moderate
 - **Use case:** Isolate individual MIG slice issues
 
 ### 2. Intense Test (`intense_test/`) ⚡ **RECOMMENDED**
 - One MIG slice at **95% memory** (primary)
 - **All other slices at 75% simultaneously** (background)
 - Rotates through each slice
-- **Intensity:** ⭐⭐⭐⭐⭐ Very High
+- **Intensity:** Very High
 - **Use case:** Real-world multi-tenant production simulation
 
 ### 3. Thrashing Test (`thrashing_test/`)
 - Rapid memory allocation/deallocation cycles
 - Variable chunk sizes and random patterns
 - Tests memory allocator robustness
-- **Intensity:** ⭐⭐⭐⭐ High
+- **Intensity:** High
 - **Use case:** Memory fragmentation and allocator stress
 
 ### 4. CUDA Test (`cuda_test/`)
 - Maximum CUDA streams (128+)
 - Unusual tensor shapes and operations
 - API edge cases and limits
-- **Intensity:** ⭐⭐⭐⭐ High
+- **Intensity:** High
 - **Use case:** CUDA API robustness validation
 
 ## Quick Start
@@ -109,28 +109,42 @@ Each `run_test.sh` script:
 - ✅ Provides monitoring commands
 
 **Note:** MIG partitions only need to be created once. You can run multiple tests on the same MIG setup.
-./mig_easy_setup.sh
 
-# Flexible setup with flags
-chmod +x mig_flags.sh
-./mig_flags.sh --enable --delete --create --list
-```
+## Test Validation Status
+
+| Test Type | 3-Minute Test | 30-Minute Test | Notes |
+|-----------|---------------|----------------|-------|
+| **Standard** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+| **Intense** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+| **Thrashing** | ⏳ Pending | ⏳ Pending | Not yet tested |
+| **CUDA API** | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+
+**Legend:**
+- ✅ **Completed** - Test has been run and validated successfully
+- ⏳ **Pending** - Test not yet run or validation pending
+- ❌ **Failed** - Test encountered issues (if any)
+
+**Test Configuration:**
+- Hardware: GH200 Grace Hopper
+- MIG Partitions: 7 instances (profile 19)
+- Current test duration: 3 minutes per MIG device
+- Full test duration: 30 minutes per MIG device (pending)
 
 ## Workflow Summary
 
-```
-1. Set up MIG partitions (one time):
-   ./mig_easy_setup.sh
+```bash
+# 1. Set up MIG partitions (one time):
+./mig_easy_setup.sh
 
-2. Run tests (can run multiple times on same MIG setup):
-   cd standard_test/ && ./run_test.sh
-   cd intense_test/ && ./run_test.sh
-   cd thrashing_test/ && ./run_test.sh
-   cd cuda_test/ && ./run_test.sh
+# 2. Run tests (can run multiple times on same MIG setup):
+cd standard_test/ && ./run_test.sh
+cd intense_test/ && ./run_test.sh
+cd thrashing_test/ && ./run_test.sh
+cd cuda_test/ && ./run_test.sh
 
-3. Monitor:
-   tail -f <test_folder>/logs/background_*.log
-   watch -n 2 nvidia-smi
+# 3. Monitor:
+tail -f <test_folder>/logs/background_*.log
+watch -n 2 nvidia-smi
 ```
 
 ## Monitoring Tests
@@ -168,21 +182,6 @@ watch -n 2 'nvidia-smi --query-gpu=memory.used,memory.total --format=csv'
 | **Production Realism** | Low | **Very High** | Medium | Medium |
 | **Best For** | Baseline testing | Production validation | Memory stress | Edge case detection |
 
-## Which Test Should I Run?
-
-### For Production Validation: 🏆
-**Run the Intense Test** (`intense_test/`) - Best simulates real-world multi-tenant scenarios.
-
-### For Comprehensive Testing: 🎯
-Run all four tests in sequence:
-1. Standard (baseline)
-2. Intense (production simulation)  
-3. Thrashing (memory stress)
-4. CUDA API (edge cases)
-
-### For Quick Validation: ⚡
-Run Standard first, then Intense if Standard passes.
-
 ### Log Files
 
 Each test creates logs in its `logs/` directory:
@@ -193,37 +192,6 @@ test_folder/logs/
 ├── <test_type>_test_TIMESTAMP.log        # Main test log
 └── <test_type>_test_errors_TIMESTAMP.log # Errors and warnings
 ```
-
-**Log Contents:**
-- Memory allocation progress
-- Device status before/after testing
-- Test iterations and progress updates
-- Background worker status (intense test)
-- Errors, warnings, and abnormalities
-- System-level GPU errors from dmesg
-
-### Requirements
-
-- NVIDIA GPU with MIG support (e.g., GH200, A100, H100)
-- NVIDIA drivers with MIG enabled
-- Python 3.6+
-- PyTorch (will be auto-installed if using `run_stress_test_background.sh`)
-
-To manually install PyTorch:
-```bash
-pip3 install torch
-```
-
-## Test Duration
-
-All tests run for **30 minutes per device**:
-
-| Test Type | Per Device | Total (7 MIGs) | Notes |
-|-----------|-----------|----------------|-------|
-| Standard | 30 min | ~3.5 hours | Sequential testing |
-| Intense | 30 min | ~3.5 hours | All devices active |
-| Thrashing | 30 min | ~3.5 hours | Rapid alloc/free cycles |
-| CUDA API | 30 min | ~3.5 hours | API edge case testing |
 
 ## Stopping Tests
 
@@ -323,20 +291,3 @@ find . -name "*.log" -mtime -1 -exec ls -lh {} \;
 # Count errors across all logs
 find . -name "*errors*.log" -exec grep -i error {} \; | wc -l
 ```
-
-## Additional Resources
-
-- **QUICK_REFERENCE.md** - Command quick reference guide
-- See individual test folders for test-specific details
-
-## Contributing
-
-When adding new tests, follow the existing structure:
-1. Create folder: `<test_name>_test/`
-2. Add `run_test.sh` (includes MIG setup + background execution)
-3. Add `<test_name>_stress_test.sh` (main test logic)
-4. Update this README
-
-## License
-
-This is a testing suite for NVIDIA MIG validation. Use at your own risk.
