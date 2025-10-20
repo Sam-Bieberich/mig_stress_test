@@ -64,23 +64,33 @@ FAILED_TESTS=0
 SKIPPED_TESTS=0
 declare -a FAILED_TEST_NAMES=()
 
-# Step 1: Run MIG Easy Setup
+# Step 1: Check/Setup MIG
 log_section "STEP 1: MIG SETUP"
-log_master "INFO" "Running mig_easy_setup.sh..."
 
-if [ -f "${SCRIPT_DIR}/mig_easy_setup.sh" ]; then
-    bash "${SCRIPT_DIR}/mig_easy_setup.sh" >> "$MASTER_LOG" 2>&1
-    if [ $? -eq 0 ]; then
-        log_master "SUCCESS" "MIG setup completed successfully"
-    else
-        log_master "ERROR" "MIG setup failed, but continuing with tests..."
-    fi
+# First check if MIG devices already exist
+MIG_COUNT=$(nvidia-smi -L 2>/dev/null | grep -c "MIG" || echo "0")
+
+if [ "$MIG_COUNT" -gt 0 ]; then
+    log_master "INFO" "MIG already configured with $MIG_COUNT devices - skipping setup"
+    nvidia-smi -L | grep "MIG" >> "$MASTER_LOG"
 else
-    log_master "WARNING" "mig_easy_setup.sh not found, skipping MIG setup"
+    log_master "INFO" "No MIG devices found - attempting MIG setup..."
+    
+    if [ -f "${SCRIPT_DIR}/mig_easy_setup.sh" ]; then
+        bash "${SCRIPT_DIR}/mig_easy_setup.sh" >> "$MASTER_LOG" 2>&1
+        if [ $? -eq 0 ]; then
+            log_master "SUCCESS" "MIG setup completed successfully"
+        else
+            log_master "ERROR" "MIG setup failed, but continuing with tests..."
+        fi
+    else
+        log_master "WARNING" "mig_easy_setup.sh not found, skipping MIG setup"
+    fi
+    
+    # Re-check MIG devices after setup
+    MIG_COUNT=$(nvidia-smi -L 2>/dev/null | grep -c "MIG" || echo "0")
 fi
 
-# Verify MIG devices
-MIG_COUNT=$(nvidia-smi -L | grep -c "MIG")
 log_master "INFO" "Detected $MIG_COUNT MIG devices"
 nvidia-smi -L | grep "MIG" >> "$MASTER_LOG"
 echo "" >> "$MASTER_LOG"
