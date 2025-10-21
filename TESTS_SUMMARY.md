@@ -114,6 +114,19 @@ kill $(cat logs/*_test_*.pid)
 ✅ **8 Test Types** - Covers sequential, multi-tenant, memory, API, PCIe, multi-process, and thermal scenarios
 ✅ **Multi-Device Testing** - Most tests run on all MIG devices simultaneously
 
+## Validation Status
+
+| Test Type | 3-Minute Test | 30-Minute Test | Notes |
+|-----------|---------------|----------------|-------|
+| Standard | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
+| Intense | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
+| Thrashing | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| CUDA API | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
+| Intense Thrashing | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| PCIe Bandwidth | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| Multi-Process | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| Thermal Shock | ✅ Completed | ✅ Completed | 30-min validated on GH200 |
+
 ## File Organization
 
 Each test folder contains:

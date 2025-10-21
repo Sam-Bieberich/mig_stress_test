@@ -187,7 +187,7 @@ Each `run_test.sh` script:
 | **Intense Thrashing** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
 | **PCIe Bandwidth** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
 | **Multi-Process** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
-| **Thermal Shock** | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| **Thermal Shock** | ✅ Completed | ✅ Completed | 30-min validated on GH200 |
 
 **Legend:**
 - ✅ **Completed** - Test has been run and validated successfully
@@ -245,22 +245,67 @@ watch -n 2 nvidia-smi
 watch -n 2 'nvidia-smi --query-gpu=memory.used,memory.total --format=csv'
 ```
 
-## Test Comparison
+## Run All Tests Sequentially (Background)
 
-| Feature | Standard | Intense | Thrashing | CUDA API | Intense Thrashing | PCIe | Multi-Process | Thermal |
-|---------|----------|---------|-----------|----------|-------------------|------|---------------|---------|
-| **Primary Focus** | Sequential stability | Multi-tenant load | Memory allocator | API robustness | Sustained pressure | Bandwidth fairness | Multi-process isolation | Thermal management |
-| **Memory Pattern** | Static 95% | Mixed 95%/75% | Rapid alloc/free | Variable patterns | 65% base + 20-30% thrash | 40% transfer buffers | 4 workers/device | 90% hot / 0% cold |
-| **Device Usage** | One at a time | All simultaneous | **All simultaneous** | One at a time | **All simultaneous** | **All simultaneous** | **All simultaneous** | **All simultaneous** |
-| **Thermal Load** | Moderate | Very High | **Very High** | High | **Extreme** | **Very High** | **Extreme** | **Very High (cycling)** |
-| **Production Realism** | Low | **Very High** | **High** | Medium | **Very High** | **Very High** | **Very High** | **High** |
-| **Best For** | Baseline testing | Production validation | Memory stress | Edge case detection | Sustained load + fragmentation | PCIe contention | Scheduler stress | Power/thermal validation |
+To run every `*_test` directory one after another automatically, use the provided orchestrator scripts in the repo root:
+
+```bash
+# 0) (Recommended) Configure MIG once interactively if needed (requires sudo)
+sudo bash mig_easy_setup.sh
+
+# 1) Launch the full sequential run in the background (survives SSH disconnects)
+chmod +x run_all_tests_background.sh
+./run_all_tests_background.sh
+
+# 2) Monitor logs
+tail -f master_logs/background_run_*.log
+# Master summary log appears as sequential_run_*.log once the run starts
+tail -f master_logs/sequential_run_*.log
+
+# 3) To stop the run
+kill $(cat master_logs/sequential_run.pid)
+```
+
+Notes:
+
+- The background launcher uses nohup and tracks a PID so the run continues after you log out.
+- The runner will discover all `*_test` folders alphabetically and execute each `run_test.sh` sequentially.
+- It pauses 32 minutes between tests (for 30-min runs with a small buffer). Adjust in `run_all_tests_sequential.sh`.
+- If a test fails critically, it flags it and continues to the next one. See `master_logs/failed_tests_*.log`.
+
+## Run All Tests via Slurm (HPC)
+
+If your environment disallows nohup/tmux (typical on HPC), submit the sequential runner as a Slurm job. A ready-to-use script is included: `submit_all_tests.slurm`.
+
+```bash
+# From the repo root on the cluster
+mkdir -p master_logs
+
+# Submit the job
+sbatch submit_all_tests.slurm
+
+# Check job status
+squeue -u $USER
+
+# Tail the Slurm output log (replace <JOBID>)
+tail -f master_logs/slurm-<JOBID>.out
+
+# Cancel the job if needed
+scancel <JOBID>
+```
+
+Notes:
+
+- The Slurm job runs `run_all_tests_sequential.sh` in the foreground; Slurm manages lifecycle and logs (no nohup required).
+- Edit `submit_all_tests.slurm` to match your site: partition/queue, account/allocation, GPUs, walltime.
+- The job loads `gcc`, `cuda`, and `python3` modules (same as this README).
+- Ensure MIG is pre-configured on the compute node (often admin-managed). The runner will skip MIG setup if devices are already present.
 
 ### Log Files
 
 Each test creates logs in its `logs/` directory:
 
-```
+```text
 test_folder/logs/
 ├── background_TIMESTAMP.log              # Background process output
 ├── <test_type>_test_TIMESTAMP.log        # Main test log
@@ -287,6 +332,7 @@ kill $(cat logs/*_test_*.pid)
 ## Understanding Results
 
 ### ✅ Success Indicators
+
 - No entries in error log files
 - All devices complete 30-minute test cycles
 - Memory allocation reaches target percentages
@@ -295,6 +341,7 @@ kill $(cat logs/*_test_*.pid)
 - Consistent iteration counts
 
 ### ❌ Failure Indicators
+
 - Entries in error log files
 - Memory allocation fails below target
 - Process crashes or hangs
@@ -305,26 +352,31 @@ kill $(cat logs/*_test_*.pid)
 ## Troubleshooting
 
 ### Out of Memory Errors
+
 - **Expected** when reaching allocation limits (95%)
 - **Problem** if happening well below target
 - Check other processes: `nvidia-smi`
 
 ### Background Workers Fail (Intense Test)
+
 - Verify MIG configuration: `nvidia-smi -L`
 - Ensure all MIG UUIDs are valid
 - Check for sufficient memory on all slices
 
 ### High Temperatures
+
 - Monitor: `nvidia-smi -q -d TEMPERATURE`
 - Intense test generates most heat
 - Ensure adequate cooling
 
 ### Process Hangs
+
 - Check system logs: `dmesg | tail -100`
 - May indicate driver/hardware issues
 - Try reducing test duration
 
 ### MIG Setup Fails
+
 - Ensure GPU supports MIG
 - Check if MIG enabled: `nvidia-smi -i 0 --query-gpu=mig.mode.current --format=csv`
 - May need system reboot after enabling MIG
@@ -339,7 +391,7 @@ kill $(cat logs/*_test_*.pid)
 
 ### Manual PyTorch Installation
 
-```
+```bash
 module load gcc cuda
 module load python3
 ```
