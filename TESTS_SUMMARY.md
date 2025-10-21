@@ -120,7 +120,7 @@ kill $(cat logs/*_test_*.pid)
 |-----------|---------------|----------------|-------|
 | Standard | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
 | Intense | ✅ Completed | ⏳ Pending | 3-min validated on GH200 |
-| Thrashing | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
+| Thrashing | ✅ Completed | ✅ Completed | 30-min validated - no errors |
 | CUDA API | ✅ Completed | ✅ Completed | No errors - validated on GH200 |
 | Intense Thrashing | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
 | PCIe Bandwidth | ✅ Completed | ⏳ Pending | 3-min validated - no errors |
